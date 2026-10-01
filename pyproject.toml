@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "deepalign-rl"
+version = "0.1.0"
+description = "DeepAlign-RL: Reasoning & Alignment Post-Training Engine from Scratch (DeepSeek-style GRPO + DPO with Verifiable Math/Logic Rewards)"
+readme = "README.md"
+authors = [{ name = "DeepAlign Research Team" }]
+license = { text = "MIT" }
+requires-python = ">=3.9"
+dependencies = [
+    "torch>=2.0.0",
+    "transformers>=4.40.0",
+    "datasets>=2.18.0",
+    "accelerate>=0.28.0",
+    "sympy>=1.12",
+    "pydantic>=2.0.0",
+    "rich>=13.0.0",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.28.0",
+    "pyyaml>=6.0",
+    "pytest>=8.0.0",
+]
+
+[project.scripts]
+deepalign = "deepalign_rl.cli.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["deepalign_rl*"]
