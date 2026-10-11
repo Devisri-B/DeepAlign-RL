@@ -1,0 +1,18 @@
+experiment_name: "dpo_reasoning_alignment"
+output_dir: "./outputs/dpo_reasoning"
+seed: 42
+
+model:
+  model_name_or_path: "Qwen/Qwen2.5-0.5B-Instruct"
+  torch_dtype: "bfloat16"
+  is_dummy: false
+
+dpo:
+  beta: 0.1
+  learning_rate: 5.0e-7
+  batch_size: 4
+  max_length: 1024
+  loss_type: "sigmoid"
+  label_smoothing: 0.0
+  total_steps: 100
+  eval_every: 10

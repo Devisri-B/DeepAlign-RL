@@ -1,0 +1,23 @@
+experiment_name: "grpo_qwen_math_reasoning"
+output_dir: "./outputs/grpo_math"
+seed: 42
+
+model:
+  model_name_or_path: "Qwen/Qwen2.5-0.5B-Instruct"
+  torch_dtype: "bfloat16"
+  is_dummy: false
+
+grpo:
+  num_generations: 4
+  max_prompt_length: 512
+  max_response_length: 512
+  temperature: 0.8
+  top_p: 0.95
+  learning_rate: 1.0e-6
+  clip_eps: 0.2
+  beta_kl: 0.04
+  kl_penalty_type: "schulman"
+  batch_size: 2
+  total_steps: 100
+  save_every: 25
+  eval_every: 10
