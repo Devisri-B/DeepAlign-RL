@@ -2,8 +2,8 @@
 
 # ∇ DeepAlign-RL
 
-### Reasoning & Alignment Post-Training Engine from Scratch
-**DeepSeek-Style GRPO &bull; Direct Preference Optimization (DPO) &bull; Verifiable Symbolic Math Rewards**
+### Reasoning & Alignment Post-Training Engine
+**Group Relative Policy Optimization (GRPO) &bull; Direct Preference Optimization (DPO) &bull; Verifiable Rewards**
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 [![PyTorch 2.x](https://img.shields.io/badge/PyTorch-2.x-EE4C2C.svg?logo=pytorch)](https://pytorch.org/)
@@ -13,27 +13,27 @@
 
 ---
 
-*A research-grade post-training framework built from scratch in PyTorch, implementing the algorithmic breakthroughs behind reasoning models like DeepSeek-R1 and DeepSeekMath. Eliminates critic memory overhead via Group Relative Policy Optimization (GRPO) and enforces mathematical correctness through SymPy-backed verifiable rewards.*
+*A modular post-training framework in PyTorch implementing Group Relative Policy Optimization (GRPO), Direct Preference Optimization (DPO), and verifiable symbolic rewards for mathematical reasoning.*
 
 </div>
 
 ---
 
-## 🎯 Executive Overview & Highlights
+## Overview
 
-Modern post-training for Large Language Models (LLMs) is shifting from subjective RLHF with noisy neural reward models toward **verifiable reasoning alignment** with objective ground-truth feedback.
+DeepAlign-RL is a modular implementation of post-training and alignment algorithms for language models focused on verifiable reasoning tasks.
 
-**DeepAlign-RL** is an end-to-end post-training engine implementing:
-1. **Critic-Free GRPO from Scratch**: Replaces the expensive Value Network $V_\phi$ used in standard PPO with **Group Relative Policy Optimization**, sampling groups of $G$ rollouts per prompt and computing group-standardized advantages. Reduces training VRAM footprint by **~50%**.
-2. **Verifiable Rule-Based Rewards**: Eliminates reward hacking and over-optimization by replacing neural reward models with deterministic **SymPy symbolic verification**, LaTeX canonicalization, and `<think> ... </think>` Chain-of-Thought (CoT) format enforcers.
-3. **Direct Preference Optimization (DPO)**: Closed-form pairwise preference alignment optimizing policy likelihood ratios against a frozen reference model without an RL inner loop.
-4. **Production-Ready Tooling**: Includes an interactive FastAPI + Vanilla CSS/JS dark-mode dashboard, Rich CLI interface, and a comprehensive `pytest` test suite with 100% pass rate.
+Core components:
+1. **Critic-Free GRPO**: Replaces the auxiliary value network ($V_\phi$) from PPO with Group Relative Policy Optimization, sampling groups of $G$ rollouts per prompt and computing group-standardized advantages. Reduces memory overhead by ~50% compared to standard actor-critic setups.
+2. **Deterministic Verifiable Rewards**: Implements rule-based mathematical verification via SymPy symbolic parsing and LaTeX extraction, alongside Chain-of-Thought (CoT) format verification for `<think>` and `<answer>` structures.
+3. **Direct Preference Optimization (DPO)**: Offline preference alignment optimizing policy likelihood ratios against a reference policy using the closed-form Bradley-Terry objective.
+4. **Developer Tooling**: Includes an interactive visualization server (FastAPI), a terminal monitoring interface (Rich), and a comprehensive unit test suite.
 
 ---
 
-## 📊 Benchmark Results
+## 📊 Empirical Evaluation
 
-Evaluated on GSM8K and MATH reasoning tasks using Qwen-family base models:
+Ablation across post-training methods evaluated on GSM8K and MATH benchmarks using Qwen-family base models:
 
 | Training Method | GSM8K Acc (%) | MATH Acc (%) | Format Compliance | Critic VRAM Overhead | Alignment Paradigm |
 | :--- | :---: | :---: | :---: | :---: | :---: |
@@ -270,14 +270,12 @@ pytest tests/ -v
 
 ---
 
-## 📝 Flagship Resume Bullet Points
+## ⚙️ Key Engineering Decisions
 
-*You can copy and adapt these bullet points directly into your resume for AI / Alignment / RLHF roles:*
-
-- **Post-Training & Reasoning Engine**: Architected and built **DeepAlign-RL** from scratch in PyTorch, an end-to-end post-training framework implementing DeepSeek-style **Group Relative Policy Optimization (GRPO)** and **Direct Preference Optimization (DPO)** for LLM mathematical reasoning.
-- **Critic-Free Scalability**: Eliminated the secondary critic/value neural network, reducing training GPU VRAM overhead by **~50%** while stabilizing policy gradients via intra-group relative advantage standardization across sampled rollout groups ($G = 4$).
-- **Verifiable Reward Modeling**: Built a deterministic, zero-noise reward pipeline using **SymPy symbolic algebra** and AST validation, boosting GSM8K accuracy from 34.2% to **74.8%** and enforcing structured `<think>` Chain-of-Thought (CoT) format compliance to **97.6%**.
-- **Full-Stack ML Engineering**: Engineered a high-throughput rollout engine with exact prompt-response masking, Schulman KL divergence regularization, and an interactive **FastAPI visualizer dashboard** for real-time trajectory inspection and token-level advantage attribution.
+- **Critic-Free Optimization**: Replacing the auxiliary value network with intra-group advantage normalization reduces GPU memory consumption by ~50%, allowing larger group sizes ($G$) and longer reasoning contexts on memory-constrained accelerators.
+- **Rule-Based Ground-Truth Verification**: By relying on SymPy symbolic algebra and LaTeX canonicalization rather than learned neural reward models, the training signal remains immune to reward hacking, length bias, and verifier drift.
+- **Sequence Masking Precision**: Gradients are backpropagated strictly through generated completion tokens while masking prompt context, ensuring policy updates remain invariant to prompt length variations.
+- **Dual Alignment Architecture**: Supports both online reinforcement learning (GRPO) for verifiable reasoning tasks and offline preference optimization (DPO) for pairwise trajectory alignment.
 
 ---
 

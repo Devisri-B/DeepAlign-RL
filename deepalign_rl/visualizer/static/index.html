@@ -261,11 +261,11 @@ The answer is obviously 3. 5*3 = 15 - 10 = 5, wait no, 25 minus 10 is 15 so x = 
       </div>
     </section>
 
-    <!-- TAB 5: ARCHITECTURE & RESUME HIGHLIGHTS -->
+    <!-- TAB 5: ARCHITECTURE & DESIGN -->
     <section class="tab-panel" id="tab-architecture">
       <div class="section-intro">
-        <h2>DeepAlign-RL Architecture & Technical Innovations</h2>
-        <p>Detailed system design, mathematical derivations, and resume-ready talking points.</p>
+        <h2>DeepAlign-RL Architecture & Design Specifications</h2>
+        <p>System architecture, objective formulations, and key engineering trade-offs.</p>
       </div>
 
       <div class="grid-2col">
@@ -276,7 +276,7 @@ The answer is obviously 3. 5*3 = 15 - 10 = 5, wait no, 25 minus 10 is 15 so x = 
           <div class="card-body text-content">
             <h4>1. Elimination of the Value Network</h4>
             <p>Traditional PPO requires training a separate Value Network $V_\phi(s)$ with identical parameter scale to the policy model, requiring <strong>50%–100% additional GPU memory</strong> and complex GAE advantage bootstrapping.</p>
-            <p>GRPO replaces the critic by drawing a group of $G$ rollouts $\{o_1, \dots, o_G\} \sim \pi_{\theta_{\text{old}}}(q)$ and standardizing advantages directly over the group:</p>
+            <p>GRPO replaces the critic by drawing a group of $G$ rollouts $\{o_1, \dots, o_G\} \sim \pi_{\text{old}}(q)$ and standardizing advantages directly over the group:</p>
             <div class="code-snippet">
               Â<sub>i</sub> = (r<sub>i</sub> - mean({r})) / (std({r}) + &epsilon;)
             </div>
@@ -291,24 +291,24 @@ The answer is obviously 3. 5*3 = 15 - 10 = 5, wait no, 25 minus 10 is 15 so x = 
 
         <div class="card glass-panel">
           <div class="card-header">
-            <h3>Resume Highlights & Flagship Bullet Points</h3>
+            <h3>Engineering Trade-offs & Design Choices</h3>
           </div>
           <div class="card-body text-content">
-            <div class="resume-bullet">
-              <span class="bullet-tag">Core Engine</span>
-              <p>Architected and implemented <strong>DeepAlign-RL</strong>, a high-throughput reasoning post-training engine from scratch in PyTorch featuring DeepSeek-style Group Relative Policy Optimization (GRPO) and Direct Preference Optimization (DPO).</p>
+            <div class="spec-bullet">
+              <span class="bullet-tag">Memory Footprint</span>
+              <p>Eliminating the auxiliary critic network reduces peak training VRAM by ~50%, allowing higher rollout throughput and larger group sizes $G$ on memory-constrained hardware.</p>
             </div>
-            <div class="resume-bullet">
-              <span class="bullet-tag">Efficiency</span>
-              <p>Eliminated the secondary critic/value neural network, reducing GPU VRAM memory overhead by <strong>~50%</strong> while retaining stable policy gradient optimization via group-relative advantage normalization.</p>
+            <div class="spec-bullet">
+              <span class="bullet-tag">Reward Integrity</span>
+              <p>Replacing learned reward models with deterministic SymPy symbolic algebra eliminates verifier gaming and length exploitation on mathematical reasoning tasks.</p>
             </div>
-            <div class="resume-bullet">
-              <span class="bullet-tag">Verifiable Rewards</span>
-              <p>Constructed a zero-noise verifiable reward engine using <strong>SymPy symbolic parsing</strong> and AST execution sandboxes for math/logic reasoning, driving GSM8K accuracy from 34.2% to <strong>74.8%</strong> and format compliance to <strong>97.6%</strong>.</p>
+            <div class="spec-bullet">
+              <span class="bullet-tag">Gradient Masking</span>
+              <p>Masks prompt tokens from policy gradients, isolating updates strictly to generated reasoning steps and answer segments.</p>
             </div>
-            <div class="resume-bullet">
-              <span class="bullet-tag">Full-Stack Tooling</span>
-              <p>Engineered an interactive post-training visualizer and diagnostic dashboard in FastAPI for inspecting token log-prob differentials, clipping dynamics, and real-time verifiable proofs.</p>
+            <div class="spec-bullet">
+              <span class="bullet-tag">Algorithmic Flexibility</span>
+              <p>Provides unified interfaces for comparing online reinforcement learning (GRPO) with offline preference optimization (DPO) under identical tokenizers and architectures.</p>
             </div>
           </div>
         </div>

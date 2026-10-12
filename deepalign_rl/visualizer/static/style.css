@@ -577,8 +577,8 @@ textarea:focus, input[type="text"]:focus, select:focus {
   font-weight: 700;
 }
 
-/* Resume Highlights */
-.resume-bullet {
+/* Design Specifications */
+.spec-bullet {
   margin-bottom: 1.25rem;
   background: rgba(10, 13, 20, 0.6);
   padding: 1rem;
