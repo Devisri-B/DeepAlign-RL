@@ -50,41 +50,76 @@ Evaluated on GSM8K and MATH reasoning tasks using Qwen-family base models:
 ### 1. Group Relative Policy Optimization (GRPO)
 
 In conventional PPO, an auxiliary value network $V_\phi(s)$ of equivalent size to the policy $\pi_\theta$ must be maintained to compute Generalized Advantage Estimation (GAE):
-$$\hat{A}_t^{\text{GAE}} = \sum_{l=0}^\infty (\gamma \lambda)^l \delta_{t+l}^V$$
+
+$$
+\hat{A}_t^{\text{GAE}} = \sum_{l=0}^\infty (\gamma \lambda)^l \delta_{t+l}^V
+$$
+
 This doubles parameter memory, requires separate critic learning rate schedules, and destabilizes early training.
 
 **GRPO** sidesteps the critic entirely. For each prompt query $q \sim \mathcal{D}$, the rollout engine samples a group of $G$ outputs:
-$$\{o_1, o_2, \dots, o_G\} \sim \pi_{\theta_{\text{old}}}(q)$$
+
+$$
+\{o_1, o_2, \dots, o_G\} \sim \pi_{\theta_{\text{old}}}(q)
+$$
 
 Each response $o_i$ is evaluated by the verifiable reward function:
-$$r_i = \mathcal{R}_{\text{verifiable}}(q, o_i, y^*)$$
+
+$$
+r_i = \mathcal{R}_{\text{verifiable}}(q, o_i, y^*)
+$$
 
 Group-relative standardized advantages are calculated:
-$$\mu = \frac{1}{G} \sum_{j=1}^G r_j, \quad \sigma = \sqrt{\frac{1}{G} \sum_{j=1}^G (r_j - \mu)^2 + \epsilon}$$
-$$\hat{A}_i = \frac{r_i - \mu}{\sigma + \epsilon}$$
+
+$$
+\mu = \frac{1}{G} \sum_{j=1}^G r_j, \quad \sigma = \sqrt{\frac{1}{G} \sum_{j=1}^G (r_j - \mu)^2 + \epsilon}
+$$
+
+$$
+\hat{A}_i = \frac{r_i - \mu}{\sigma + \epsilon}
+$$
 
 > **Key Theoretical Property**: If all $G$ completions for a query receive identical rewards (e.g., all correct or all incorrect), $\sigma \approx 0$ and $\hat{A}_i \leftarrow 0$. The gradient vanishes, ensuring the policy only updates on prompts with contrastive discriminative signal.
 
 #### Clipped Policy Gradient & Schulman KL Penalty
+
 The token-level objective maximized per group sample is:
-$$\mathcal{L}_{\text{GRPO}}(\theta) = \frac{1}{G} \sum_{i=1}^G \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \left[ \min\left( \rho_{i,t} \hat{A}_i, \text{clip}(\rho_{i,t}, 1-\epsilon, 1+\epsilon) \hat{A}_i \right) - \beta_{\text{KL}} \mathbb{D}_{\text{KL}}(\pi_\theta || \pi_{\text{ref}}) \right]$$
+
+$$
+\mathcal{L}_{\text{GRPO}}(\theta) = \frac{1}{G} \sum_{i=1}^G \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \left[ \min\left( \rho_{i,t} \hat{A}_i, \operatorname{clip}(\rho_{i,t}, 1-\epsilon, 1+\epsilon) \hat{A}_i \right) - \beta_{\text{KL}} \mathbb{D}_{\text{KL}}(\pi_\theta \parallel \pi_{\text{ref}}) \right]
+$$
 
 where importance sampling probability ratio is:
-$$\rho_{i,t} = \frac{\pi_\theta(o_{i,t} | q, o_{i,<t})}{\pi_{\theta_{\text{old}}}(o_{i,t} | q, o_{i,<t})}$$
 
-And $\mathbb{D}_{\text{KL}}$ uses the Schulman non-negative unbiased estimator ($k_3$):
-$$\mathbb{D}_{\text{KL}}(\pi_\theta || \pi_{\text{ref}}) = \frac{\pi_{\text{ref}}(o_{i,t})}{\pi_\theta(o_{i,t})} - \log \frac{\pi_{\text{ref}}(o_{i,t})}{\pi_\theta(o_{i,t})} - 1$$
+$$
+\rho_{i,t} = \frac{\pi_\theta(o_{i,t} \mid q, o_{i,<t})}{\pi_{\theta_{\text{old}}}(o_{i,t} \mid q, o_{i,<t})}
+$$
+
+And the KL divergence uses the Schulman non-negative unbiased estimator:
+
+$$
+\mathbb{D}_{\text{KL}}(\pi_\theta \parallel \pi_{\text{ref}}) = \frac{\pi_{\text{ref}}(o_{i,t})}{\pi_\theta(o_{i,t})} - \log \frac{\pi_{\text{ref}}(o_{i,t})}{\pi_\theta(o_{i,t})} - 1
+$$
 
 ---
 
 ### 2. Direct Preference Optimization (DPO)
 
 For offline preference pairs $(x, y_w, y_l)$ where $y_w \succ y_l$, DPO optimizes the policy directly using the closed-form Bradley-Terry objective without training an explicit reward model:
-$$\mathcal{L}_{\text{DPO}}(\theta; \pi_{\text{ref}}) = - \mathbb{E}_{(x, y_w, y_l)} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w|x)}{\pi_{\text{ref}}(y_w|x)} - \beta \log \frac{\pi_\theta(y_l|x)}{\pi_{\text{ref}}(y_l|x)} \right) \right]$$
+
+$$
+\mathcal{L}_{\text{DPO}}(\theta; \pi_{\text{ref}}) = - \mathbb{E}_{(x, y_w, y_l)} \left[ \log \sigma \left( \beta \log \frac{\pi_\theta(y_w \mid x)}{\pi_{\text{ref}}(y_w \mid x)} - \beta \log \frac{\pi_\theta(y_l \mid x)}{\pi_{\text{ref}}(y_l \mid x)} \right) \right]
+$$
 
 Implicit rewards are monitored during training:
-$$\hat{r}_\theta(x, y) = \beta \left( \log \pi_\theta(y|x) - \log \pi_{\text{ref}}(y|x) \right)$$
-$$\text{Margin} = \hat{r}_\theta(x, y_w) - \hat{r}_\theta(x, y_l)$$
+
+$$
+\hat{r}_\theta(x, y) = \beta \left( \log \pi_\theta(y \mid x) - \log \pi_{\text{ref}}(y \mid x) \right)
+$$
+
+$$
+\operatorname{Margin} = \hat{r}_\theta(x, y_w) - \hat{r}_\theta(x, y_l)
+$$
 
 ---
 
