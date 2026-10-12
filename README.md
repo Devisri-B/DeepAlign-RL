@@ -60,7 +60,7 @@ This doubles parameter memory, requires separate critic learning rate schedules,
 **GRPO** sidesteps the critic entirely. For each prompt query $q \sim \mathcal{D}$, the rollout engine samples a group of $G$ outputs:
 
 $$
-\{o_1, o_2, \dots, o_G\} \sim \pi_{\theta_{\text{old}}}(q)
+\{o_1, o_2, \dots, o_G\} \sim \pi_{\text{old}}(q)
 $$
 
 Each response $o_i$ is evaluated by the verifiable reward function:
@@ -79,20 +79,20 @@ $$
 \hat{A}_i = \frac{r_i - \mu}{\sigma + \epsilon}
 $$
 
-> **Key Theoretical Property**: If all $G$ completions for a query receive identical rewards (e.g., all correct or all incorrect), $\sigma \approx 0$ and $\hat{A}_i \leftarrow 0$. The gradient vanishes, ensuring the policy only updates on prompts with contrastive discriminative signal.
+> **Key Theoretical Property**: If all $G$ completions for a query receive identical rewards (e.g., all correct or all incorrect), then $\sigma \approx 0$ and $\hat{A}_i = 0$. The gradient vanishes, ensuring the policy only updates on prompts with contrastive discriminative signal.
 
 #### Clipped Policy Gradient & Schulman KL Penalty
 
 The token-level objective maximized per group sample is:
 
 $$
-\mathcal{L}_{\text{GRPO}}(\theta) = \frac{1}{G} \sum_{i=1}^G \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \left[ \min\left( \rho_{i,t} \hat{A}_i, \operatorname{clip}(\rho_{i,t}, 1-\epsilon, 1+\epsilon) \hat{A}_i \right) - \beta_{\text{KL}} \mathbb{D}_{\text{KL}}(\pi_\theta \parallel \pi_{\text{ref}}) \right]
+\mathcal{L}_{\text{GRPO}}(\theta) = \frac{1}{G} \sum_{i=1}^G \frac{1}{|o_i|} \sum_{t=1}^{|o_i|} \left[ \min\left( \rho_{i,t} \hat{A}_i, \text{clip}(\rho_{i,t}, 1-\epsilon, 1+\epsilon) \hat{A}_i \right) - \beta_{\text{KL}} \mathbb{D}_{\text{KL}}(\pi_\theta \parallel \pi_{\text{ref}}) \right]
 $$
 
 where importance sampling probability ratio is:
 
 $$
-\rho_{i,t} = \frac{\pi_\theta(o_{i,t} \mid q, o_{i,<t})}{\pi_{\theta_{\text{old}}}(o_{i,t} \mid q, o_{i,<t})}
+\rho_{i,t} = \frac{\pi_\theta(o_{i,t} \mid q, o_{i,\lt t})}{\pi_{\text{old}}(o_{i,t} \mid q, o_{i,\lt t})}
 $$
 
 And the KL divergence uses the Schulman non-negative unbiased estimator:
@@ -118,7 +118,7 @@ $$
 $$
 
 $$
-\operatorname{Margin} = \hat{r}_\theta(x, y_w) - \hat{r}_\theta(x, y_l)
+\text{Margin} = \hat{r}_\theta(x, y_w) - \hat{r}_\theta(x, y_l)
 $$
 
 ---
