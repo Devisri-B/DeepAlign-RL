@@ -3,6 +3,7 @@
 Deployable directly to Streamlit Community Cloud (streamlit.app) as a live flagship demo.
 """
 
+import inspect
 import math
 from typing import Dict, List
 import pandas as pd
@@ -18,6 +19,14 @@ from deepalign_rl.rewards.composite import CompositeReward
 from deepalign_rl.rewards.format_verifier import FormatReward
 from deepalign_rl.rewards.math_verifier import VerifiableMathReward
 from deepalign_rl.utils.device import get_optimal_device, get_device_name
+
+# Helper for forward-compatible stretch width without deprecation warnings
+def _get_stretch_kwargs() -> dict:
+    if "width" in inspect.signature(st.button).parameters:
+        return {"width": "stretch"}
+    return {"use_container_width": True}
+
+STRETCH_KW = _get_stretch_kwargs()
 
 # Configure Page
 st.set_page_config(
@@ -331,7 +340,7 @@ if menu == "🧪 Verifiable Reward Studio":
             key="verif_gt",
         )
 
-        verify_btn = st.button("⚡ Evaluate Verifiable Reward", type="primary", use_container_width=True)
+        verify_btn = st.button("⚡ Evaluate Verifiable Reward", type="primary", **STRETCH_KW)
         if verify_btn:
             st.toast("Verifiable reward computed via SymPy & AST engine!", icon="⚡")
 
@@ -555,7 +564,7 @@ elif menu == "⚡ GRPO Rollout Simulator":
         yaxis_title="Standardized Advantage Â_i",
         margin=dict(t=40, b=20, l=20, r=20),
     )
-    st.plotly_chart(fig_adv, use_container_width=True)
+    st.plotly_chart(fig_adv, **STRETCH_KW)
 
     # Spacious Responsive 2-Column Grid for Sampled Rollouts
     st.markdown(f"### 👥 Sampled Group Rollouts (G = {group_size})")
@@ -699,7 +708,7 @@ elif menu == "📈 Empirical Benchmarks":
     ]
 
     df = pd.DataFrame(benchmark_data)
-    st.dataframe(df, use_container_width=True, hide_index=True)
+    st.dataframe(df, hide_index=True, **STRETCH_KW)
 
     st.markdown("### 📊 Accuracy & Reasoning Depth Comparison")
     fig = px.bar(
@@ -716,7 +725,7 @@ elif menu == "📈 Empirical Benchmarks":
         paper_bgcolor="rgba(15,23,42,0.4)",
         font=dict(family="Plus Jakarta Sans"),
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, **STRETCH_KW)
 
     # Simulated Training Dynamics Curves
     st.markdown("### 📉 GRPO Post-Training Convergence Dynamics")
@@ -731,11 +740,11 @@ elif menu == "📈 Empirical Benchmarks":
     with c_left:
         fig_r = px.line(df_dynamics, x="Step", y="Mean Reward", title="Verifiable Reward Trajectory (SymPy Equivalent)", template="plotly_dark", color_discrete_sequence=["#34d399"])
         fig_r.update_layout(plot_bgcolor="rgba(15,23,42,0.4)", paper_bgcolor="rgba(15,23,42,0.4)")
-        st.plotly_chart(fig_r, use_container_width=True)
+        st.plotly_chart(fig_r, **STRETCH_KW)
     with c_right:
         fig_kl = px.line(df_dynamics, x="Step", y="KL Divergence", title="Schulman KL Divergence Penalty (Drift Constraint)", template="plotly_dark", color_discrete_sequence=["#f43f5e"])
         fig_kl.update_layout(plot_bgcolor="rgba(15,23,42,0.4)", paper_bgcolor="rgba(15,23,42,0.4)")
-        st.plotly_chart(fig_kl, use_container_width=True)
+        st.plotly_chart(fig_kl, **STRETCH_KW)
 
 
 # -------------------------------------------------------------
