@@ -31,6 +31,16 @@ def compute_group_advantages(
         advantages: Tensor of same shape as rewards with group-mean 0 and std 1.
     """
     total_samples = rewards.size(0)
+    if total_samples == 0:
+        return torch.empty_like(rewards)
+    if total_samples < group_size or total_samples % group_size != 0:
+        # Defensive fallback: compute relative advantages across available sample batch
+        mean = rewards.mean()
+        std = rewards.std(unbiased=False)
+        if std < eps:
+            return torch.zeros_like(rewards)
+        return (rewards - mean) / (std + eps)
+
     num_groups = total_samples // group_size
     rewards_grouped = rewards.view(num_groups, group_size)
 

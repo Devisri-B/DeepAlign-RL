@@ -23,6 +23,13 @@ def test_compute_group_advantages():
     # Check zero variance group has all 0 advantages
     assert torch.all(adv[4:] == 0.0)
 
+    # Size mismatch test (e.g. 4 samples with group_size=5)
+    odd_rewards = torch.tensor([1.5, 1.0, 0.5, 0.0], dtype=torch.float32)
+    adv_mismatch = compute_group_advantages(odd_rewards, group_size=5)
+    assert adv_mismatch.shape == odd_rewards.shape
+    assert adv_mismatch[0] > 0
+    assert adv_mismatch[-1] < 0
+
 
 def test_grpo_loss_backward():
     config = GRPOConfig(clip_eps=0.2, beta_kl=0.04)

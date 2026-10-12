@@ -1,6 +1,6 @@
 """DeepAlign-RL: Interactive Streamlit Dashboard for Post-Training & Reasoning Alignment.
 
-Deployable directly to Streamlit Community Cloud (streamlit.app) as a live demo.
+Deployable directly to Streamlit Community Cloud (streamlit.app) as a live flagship demo.
 """
 
 import math
@@ -30,7 +30,7 @@ st.set_page_config(
 # Custom High-Aesthetic Dark Theme CSS
 CUSTOM_CSS = """
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
   html, body, [class*="css"] {
     font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -41,34 +41,45 @@ CUSTOM_CSS = """
   }
 
   /* Metric cards */
-  .metric-container {
-    background: rgba(18, 24, 38, 0.7);
+  .metric-card {
+    background: rgba(18, 24, 38, 0.75);
     border: 1px solid rgba(255, 255, 255, 0.08);
-    border-radius: 12px;
-    padding: 1.2rem;
-    margin-bottom: 1rem;
+    border-radius: 14px;
+    padding: 1.15rem 1.25rem;
+    margin-bottom: 0.75rem;
     backdrop-filter: blur(12px);
     transition: transform 0.2s ease, border-color 0.2s ease;
   }
-  .metric-container:hover {
-    border-color: rgba(56, 189, 248, 0.3);
+  .metric-card:hover {
+    border-color: rgba(56, 189, 248, 0.35);
     transform: translateY(-2px);
   }
 
-  .metric-title {
-    font-size: 0.75rem;
+  .metric-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 0.72rem;
     font-weight: 700;
     text-transform: uppercase;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.05em;
     color: #94a3b8;
-    margin-bottom: 0.35rem;
+    white-space: nowrap;
+    margin-bottom: 0.4rem;
   }
 
-  .metric-value {
-    font-size: 1.75rem;
+  .metric-main-value {
+    font-size: 1.85rem;
     font-weight: 800;
     font-family: 'JetBrains Mono', monospace;
-    color: #f8fafc;
+    line-height: 1.15;
+    white-space: nowrap;
+  }
+
+  .metric-sub {
+    font-size: 0.72rem;
+    color: #64748b;
+    margin-top: 0.25rem;
   }
 
   /* Status Badges */
@@ -101,19 +112,24 @@ CUSTOM_CSS = """
   }
 
   /* Rollout Cards */
-  .rollout-box {
-    background: rgba(15, 23, 42, 0.65);
-    border: 1px solid rgba(255, 255, 255, 0.07);
+  .rollout-card {
+    background: rgba(15, 23, 42, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 12px;
-    padding: 1.25rem;
-    margin-bottom: 1.25rem;
+    padding: 1.2rem;
+    margin-bottom: 1.2rem;
     transition: all 0.2s ease;
   }
-  .rollout-box.pos {
-    border-left: 4px solid #10b981;
+  .rollout-card.pos {
+    border-left: 5px solid #10b981;
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.06), rgba(15, 23, 42, 0.75));
   }
-  .rollout-box.neg {
-    border-left: 4px solid #f43f5e;
+  .rollout-card.neg {
+    border-left: 5px solid #f43f5e;
+    background: linear-gradient(135deg, rgba(244, 63, 94, 0.06), rgba(15, 23, 42, 0.75));
+  }
+  .rollout-card.neutral {
+    border-left: 5px solid #64748b;
   }
 
   .header-gradient {
@@ -121,6 +137,12 @@ CUSTOM_CSS = """
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     font-weight: 800;
+  }
+
+  /* Clean divider */
+  .clean-divider {
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    margin: 1.25rem 0;
   }
 </style>
 """
@@ -178,35 +200,145 @@ if menu == "🧪 Verifiable Reward Studio":
         "Evaluates mathematical equivalence via **SymPy symbolic algebra** and enforces `<think>...</think><answer>...</answer>` Chain-of-Thought structures without learned neural reward models."
     )
 
-    col1, col2 = st.columns([1, 1], gap="medium")
+    # Helper function to generate candidate response variations for any problem
+    def get_candidate_variations(problem: Dict[str, str]) -> Dict[str, str]:
+        gt = problem["ground_truth"]
+        target = problem["target_solution"]
+
+        # Variation 1: Perfect target solution
+        perfect = target
+
+        # Variation 2: Symbolic equivalence test (tests SymPy parsing & algebra)
+        if gt == "11":
+            equiv = "<think>Subtract 15 from both sides: 3*x = 33. Dividing both sides gives x = 33/3.</think>\n<answer>\\boxed{33/3}</answer>"
+        elif gt == "81*pi":
+            equiv = "<think>Circumference gives radius r = 9. Area is pi * 9^2 = (9^2)*pi.</think>\n<answer>\\boxed{(9^2)*pi}</answer>"
+        elif "/" in gt:
+            parts = gt.split("/")
+            equiv = f"<think>We compute the fraction equivalent: ({parts[0]}*2)/({parts[1]}*2) simplifies to {gt}.</think>\n<answer>\\boxed{{{int(parts[0])*2}/{int(parts[1])*2}}}</answer>"
+        else:
+            equiv = f"<think>Step-by-step reduction simplifies cleanly to {gt} + 0.</think>\n<answer>\\boxed{{{gt} + 0}}</answer>"
+
+        # Variation 3: Arithmetic / Calculation Mistake (Format PASS, Math FAIL)
+        try:
+            val = float(gt.split("*")[0].split("/")[0])
+            wrong_val = str(int(val + 5))
+        except Exception:
+            wrong_val = "99"
+        mistake = f"<think>Subtract terms: intermediate calculation produces {wrong_val}.</think>\n<answer>\\boxed{{{wrong_val}}}</answer>"
+
+        # Variation 4: Missing Format Tags (Math PASS, Format FAIL)
+        missing_fmt = f"Directly solving yields the answer {gt}. Final result: \\boxed{{{gt}}}."
+
+        # Variation 5: Complete Failure / Hallucination (Math FAIL, Format FAIL)
+        fail = "The equation has multiple non-linear solutions that cannot be verified."
+
+        return {
+            "🌟 Perfect Solution (<think> + \\boxed{})": perfect,
+            "🔄 Symbolic Equivalence (SymPy Test)": equiv,
+            "❌ Arithmetic Mistake (Format Pass, Math Fail)": mistake,
+            "⚠️ Missing Format Tags (Math Pass, Format Fail)": missing_fmt,
+            "🚫 Complete Failure (Math Fail, Format Fail)": fail,
+        }
+
+    # Presets lookup
+    preset_names = ["-- Choose a Curated Problem --"] + [
+        f"[{p['category'].upper()}] {p['prompt'][:45]}..." for p in CURATED_MATH_PROBLEMS
+    ]
+    name_to_prob = {
+        f"[{p['category'].upper()}] {p['prompt'][:45]}...": p for p in CURATED_MATH_PROBLEMS
+    }
+
+    # Initialize Session State
+    if "verif_preset_name" not in st.session_state:
+        st.session_state["verif_preset_name"] = preset_names[0]
+    if "verif_prompt" not in st.session_state:
+        st.session_state["verif_prompt"] = CURATED_MATH_PROBLEMS[0]["prompt"]
+    if "verif_completion" not in st.session_state:
+        st.session_state["verif_completion"] = CURATED_MATH_PROBLEMS[0]["target_solution"]
+    if "verif_gt" not in st.session_state:
+        st.session_state["verif_gt"] = CURATED_MATH_PROBLEMS[0]["ground_truth"]
+    if "verif_candidate_key" not in st.session_state:
+        st.session_state["verif_candidate_key"] = "🌟 Perfect Solution (<think> + \\boxed{})"
+
+    def on_preset_change():
+        p_name = st.session_state["preset_selector"]
+        st.session_state["verif_preset_name"] = p_name
+        prob = name_to_prob.get(p_name, CURATED_MATH_PROBLEMS[0])
+        st.session_state["verif_prompt"] = prob["prompt"]
+        st.session_state["verif_gt"] = prob["ground_truth"]
+        st.session_state["verif_candidate_key"] = "🌟 Perfect Solution (<think> + \\boxed{})"
+        variations = get_candidate_variations(prob)
+        st.session_state["verif_completion"] = variations["🌟 Perfect Solution (<think> + \\boxed{})"]
+
+    def on_scenario_change():
+        scen_key = st.session_state["candidate_scenario_selector"]
+        st.session_state["verif_candidate_key"] = scen_key
+        p_name = st.session_state.get("verif_preset_name", preset_names[0])
+        prob = name_to_prob.get(p_name, CURATED_MATH_PROBLEMS[0])
+        variations = get_candidate_variations(prob)
+        if scen_key in variations:
+            st.session_state["verif_completion"] = variations[scen_key]
+
+    col1, col2 = st.columns([1, 1], gap="large")
 
     with col1:
         st.markdown("### 📝 Input Problem & Candidate Response")
-        preset_options = ["-- Choose a Curated Problem --"] + [
-            f"[{p['category'].upper()}] {p['prompt'][:45]}..." for p in CURATED_MATH_PROBLEMS
-        ]
-        selected_idx = st.selectbox("Load Curated Preset:", range(len(preset_options)), format_func=lambda x: preset_options[x])
 
-        if selected_idx > 0:
-            active_problem = CURATED_MATH_PROBLEMS[selected_idx - 1]
-            default_prompt = active_problem["prompt"]
-            default_completion = active_problem["target_solution"]
-            default_gt = active_problem["ground_truth"]
-        else:
-            default_prompt = "Solve for x in the equation: 3*x + 15 = 48. What is the value of x? Show reasoning in <think> and final answer in \\boxed{}."
-            default_completion = "<think>Subtract 15 from both sides: 3*x = 33. Divide by 3: x = 11.</think>\n<answer>\\boxed{11}</answer>"
-            default_gt = "11"
+        curr_preset = st.session_state.get("verif_preset_name", preset_names[0])
+        p_idx = preset_names.index(curr_preset) if curr_preset in preset_names else 0
 
-        prompt_input = st.text_area("Prompt / Query:", value=default_prompt, height=85)
-        completion_input = st.text_area("Model Completion:", value=default_completion, height=140)
-        gt_input = st.text_input("Ground Truth Answer:", value=default_gt)
+        st.selectbox(
+            "Load Curated Preset:",
+            preset_names,
+            index=p_idx,
+            key="preset_selector",
+            on_change=on_preset_change,
+            help="Select a curated benchmark problem from GSM8K/MATH styles.",
+        )
+
+        p_name = st.session_state.get("verif_preset_name", preset_names[0])
+        active_prob = name_to_prob.get(p_name, CURATED_MATH_PROBLEMS[0])
+        current_variations = get_candidate_variations(active_prob)
+        scenario_list = list(current_variations.keys()) + ["✍️ Custom / Freeform Edit"]
+
+        curr_scen = st.session_state.get("verif_candidate_key", scenario_list[0])
+        s_idx = scenario_list.index(curr_scen) if curr_scen in scenario_list else 0
+
+        st.selectbox(
+            "Test Candidate Scenario:",
+            scenario_list,
+            index=s_idx,
+            key="candidate_scenario_selector",
+            on_change=on_scenario_change,
+            help="Instantly test how the verifier handles exact answers, symbolic fractions, calculation errors, or formatting violations.",
+        )
+
+        prompt_input = st.text_area(
+            "Prompt / Query:",
+            key="verif_prompt",
+            height=85,
+        )
+
+        completion_input = st.text_area(
+            "Model Completion (Editable):",
+            key="verif_completion",
+            height=140,
+        )
+
+        gt_input = st.text_input(
+            "Ground Truth Answer:",
+            key="verif_gt",
+        )
 
         verify_btn = st.button("⚡ Evaluate Verifiable Reward", type="primary", use_container_width=True)
+        if verify_btn:
+            st.toast("Verifiable reward computed via SymPy & AST engine!", icon="⚡")
 
     with col2:
         st.markdown("### 🔬 Symbolic & Format Diagnostics")
 
-        # Evaluate
+        # Evaluate current inputs directly from session state widgets
         res = composite_verifier.evaluate(prompt_input, completion_input, gt_input)
         math_details = res.details.get("components", {}).get("verifiable_math", {})
         fmt_details = res.details.get("components", {}).get("format_verifier", {})
@@ -217,38 +349,54 @@ if menu == "🧪 Verifiable Reward Studio":
         m1, m2, m3 = st.columns(3)
         with m1:
             st.markdown(
-                f"""<div class='metric-container'>
-                    <div class='metric-title'>Composite Reward</div>
-                    <div class='metric-value' style='color:#38bdf8;'>{res.score:.2f}</div>
+                f"""<div class='metric-card'>
+                    <div class='metric-header'>
+                        <span>Composite Reward</span>
+                        <span>🎯</span>
+                    </div>
+                    <div class='metric-main-value' style='color:#38bdf8;'>{res.score:.2f}</div>
+                    <div class='metric-sub'>Max: 1.50 (w_math=1.0, w_fmt=0.5)</div>
                 </div>""",
                 unsafe_allow_html=True,
             )
         with m2:
             pass_color = "#34d399" if is_math_pass else "#fb7185"
-            pass_text = "PASS" if is_math_pass else "FAIL"
+            pass_text = "PASS ✔" if is_math_pass else "FAIL ✘"
             st.markdown(
-                f"""<div class='metric-container'>
-                    <div class='metric-title'>Math Equivalence</div>
-                    <div class='metric-value' style='color:{pass_color};'>{pass_text}</div>
+                f"""<div class='metric-card'>
+                    <div class='metric-header'>
+                        <span>Math Equivalence</span>
+                        <span>🧮</span>
+                    </div>
+                    <div class='metric-main-value' style='color:{pass_color};'>{pass_text}</div>
+                    <div class='metric-sub'>SymPy Symbolic Proof</div>
                 </div>""",
                 unsafe_allow_html=True,
             )
         with m3:
             fmt_color = "#34d399" if is_fmt_pass else "#fb7185"
-            fmt_text = "PASS" if is_fmt_pass else "FAIL"
+            fmt_text = "PASS ✔" if is_fmt_pass else "FAIL ✘"
             st.markdown(
-                f"""<div class='metric-container'>
-                    <div class='metric-title'>Format Compliance</div>
-                    <div class='metric-value' style='color:{fmt_color};'>{fmt_text}</div>
+                f"""<div class='metric-card'>
+                    <div class='metric-header'>
+                        <span>Format Compliance</span>
+                        <span>📐</span>
+                    </div>
+                    <div class='metric-main-value' style='color:{fmt_color};'>{fmt_text}</div>
+                    <div class='metric-sub'>&lt;think&gt; & &lt;answer&gt; Tags</div>
                 </div>""",
                 unsafe_allow_html=True,
             )
 
         with st.expander("SymPy Proof & Extraction Breakdown", expanded=True):
-            st.markdown(f"**Extracted Model Answer:** `{math_details.get('extracted_pred', 'None')}`")
-            st.markdown(f"**Canonical Ground Truth:** `{math_details.get('ground_truth', 'None')}`")
-            st.markdown(f"**Verification Status:** **{math_details.get('explanation', 'N/A')}**")
-            st.markdown("---")
+            ext_pred = math_details.get("extracted_pred", "None")
+            gt_ans = math_details.get("ground_truth", "None")
+            status_expl = math_details.get("explanation", "N/A")
+
+            st.markdown(f"**Extracted Model Answer:** `{ext_pred}`")
+            st.markdown(f"**Canonical Ground Truth:** `{gt_ans}`")
+            st.markdown(f"**Verification Status:** **{status_expl}**")
+            st.markdown("<div class='clean-divider'></div>", unsafe_allow_html=True)
             st.markdown(f"• `<think>` Tag Present & Closed: `{'✔ Yes' if fmt_details.get('has_close_think') else '✘ No'}`")
             st.markdown(f"• Reasoning Characters: `{fmt_details.get('think_length', 0)} chars`")
             st.markdown(f"• `<answer>` Tag Formatted: `{'✔ Yes' if is_fmt_pass else '✘ No'}`")
@@ -279,12 +427,12 @@ elif menu == "⚡ GRPO Rollout Simulator":
 
     st.markdown(f"**Prompt Query:** `{sim_prompt}` | **Target Solution:** `{sim_gt}`")
 
-    # 4 distinct candidate trajectories
-    sample_rollouts = [
+    # 6 distinct, diverse candidate trajectories for any group size up to 6
+    all_sample_rollouts = [
         {
             "id": 1,
             "text": "<think>Subtract 15 from both sides: 3*x = 33. Divide by 3: x = 11.</think>\n<answer>\\boxed{11}</answer>",
-            "desc": "Perfect CoT + Correct Answer",
+            "desc": "Perfect CoT + Exact Answer",
         },
         {
             "id": 2,
@@ -299,9 +447,21 @@ elif menu == "⚡ GRPO Rollout Simulator":
         {
             "id": 4,
             "text": "<think>Subtract 15 from 48 to get 35. Divide by 3: x = 11.66.</think>\n<answer>\\boxed{11.66}</answer>",
-            "desc": "Arithmetic Hallucination / Computation Mistake",
+            "desc": "Arithmetic Mistake in Reasoning Step",
         },
-    ][:group_size]
+        {
+            "id": 5,
+            "text": "<think>Multiply both sides by 15: 45*x = 48 so x = 15.</think>\n<answer>\\boxed{15}</answer>",
+            "desc": "Algebraic Flaw with Formatted Tags",
+        },
+        {
+            "id": 6,
+            "text": "<think>Let us examine the equation 3*x + 15 = 48...",
+            "desc": "Truncated Reasoning / Missing Answer Tag",
+        },
+    ]
+
+    sample_rollouts = all_sample_rollouts[:group_size]
 
     # Evaluate rewards
     raw_scores = []
@@ -318,57 +478,117 @@ elif menu == "⚡ GRPO Rollout Simulator":
     std_val = float(scores_tensor.std().item()) if group_size > 1 else 0.0
 
     st.markdown("### 📊 Intra-Group Normalization Statistics")
-    s1, s2, s3 = st.columns(3)
+    s1, s2, s3, s4 = st.columns(4)
     with s1:
         st.markdown(
-            f"""<div class='metric-container'>
-                <div class='metric-title'>Group Mean Reward (μ)</div>
-                <div class='metric-value'>{mean_val:.2f}</div>
+            f"""<div class='metric-card'>
+                <div class='metric-header'>
+                    <span>Group Mean Reward (μ)</span>
+                    <span>📈</span>
+                </div>
+                <div class='metric-main-value' style='color:#38bdf8;'>{mean_val:.2f}</div>
+                <div class='metric-sub'>Intra-Group Average</div>
             </div>""",
             unsafe_allow_html=True,
         )
     with s2:
         st.markdown(
-            f"""<div class='metric-container'>
-                <div class='metric-title'>Group Reward Std (σ)</div>
-                <div class='metric-value'>{std_val:.2f}</div>
+            f"""<div class='metric-card'>
+                <div class='metric-header'>
+                    <span>Group Reward Std (σ)</span>
+                    <span>📊</span>
+                </div>
+                <div class='metric-main-value' style='color:#818cf8;'>{std_val:.2f}</div>
+                <div class='metric-sub'>Reward Dispersion</div>
             </div>""",
             unsafe_allow_html=True,
         )
     with s3:
         st.markdown(
-            f"""<div class='metric-container'>
-                <div class='metric-title'>Informative Contrast?</div>
-                <div class='metric-value' style='color:#34d399;'>{'✔ Yes (σ > 0)' if std_val > 1e-4 else '✘ Zero Variance'}</div>
+            f"""<div class='metric-card'>
+                <div class='metric-header'>
+                    <span>Informative Contrast?</span>
+                    <span>⚡</span>
+                </div>
+                <div class='metric-main-value' style='color:#34d399;'>{'✔ Yes (σ > 0)' if std_val > 1e-4 else '✘ Zero Variance'}</div>
+                <div class='metric-sub'>Non-zero gradient updates</div>
+            </div>""",
+            unsafe_allow_html=True,
+        )
+    with s4:
+        st.markdown(
+            f"""<div class='metric-card'>
+                <div class='metric-header'>
+                    <span>Sampled Group Size</span>
+                    <span>👥</span>
+                </div>
+                <div class='metric-main-value' style='color:#c084fc;'>G = {group_size}</div>
+                <div class='metric-sub'>Rollouts per prompt</div>
             </div>""",
             unsafe_allow_html=True,
         )
 
-    st.markdown("### 👥 Sampled Group Rollouts (G = 4)")
-    cols = st.columns(group_size)
-    for i, col in enumerate(cols):
+    # Plotly Advantage Bar Chart
+    df_adv = pd.DataFrame({
+        "Rollout": [f"Rollout #{i+1}" for i in range(group_size)],
+        "Advantage": [float(advantages[i].item()) for i in range(group_size)],
+        "Raw Score": [f"{raw_scores[i]:.2f}" for i in range(group_size)],
+        "Description": [sample_rollouts[i]["desc"] for i in range(group_size)],
+        "Policy Action": ["Reinforce Tokens" if float(advantages[i].item()) > 0 else "Penalize Tokens" for i in range(group_size)],
+    })
+
+    fig_adv = px.bar(
+        df_adv,
+        x="Rollout",
+        y="Advantage",
+        color="Policy Action",
+        color_discrete_map={"Reinforce Tokens": "#10b981", "Penalize Tokens": "#f43f5e"},
+        title=f"Intra-Group Advantage Distribution (G = {group_size}): Â_i = (r_i - μ) / (σ + ε)",
+        hover_data=["Raw Score", "Description"],
+        template="plotly_dark",
+    )
+    fig_adv.add_hline(y=0.0, line_dash="dash", line_color="#94a3b8")
+    fig_adv.update_layout(
+        plot_bgcolor="rgba(15,23,42,0.4)",
+        paper_bgcolor="rgba(15,23,42,0.4)",
+        font=dict(family="Plus Jakarta Sans"),
+        yaxis_title="Standardized Advantage Â_i",
+        margin=dict(t=40, b=20, l=20, r=20),
+    )
+    st.plotly_chart(fig_adv, use_container_width=True)
+
+    # Spacious Responsive 2-Column Grid for Sampled Rollouts
+    st.markdown(f"### 👥 Sampled Group Rollouts (G = {group_size})")
+
+    grid_col1, grid_col2 = st.columns(2, gap="large")
+
+    for i in range(group_size):
         adv_val = float(advantages[i].item())
         is_pos = adv_val > 0.05
         is_neg = adv_val < -0.05
         adv_color = "#34d399" if is_pos else ("#fb7185" if is_neg else "#94a3b8")
-        action_text = "+ Reinforce Tokens" if is_pos else ("- Suppress Tokens" if is_neg else "0 Neutral")
-        border_class = "pos" if is_pos else ("neg" if is_neg else "")
+        action_text = "▲ Reinforce Tokens (+ Gradient)" if is_pos else ("▼ Penalize Tokens (- Gradient)" if is_neg else "— Neutral Baseline")
+        border_class = "pos" if is_pos else ("neg" if is_neg else "neutral")
 
-        with col:
+        target_col = grid_col1 if (i % 2 == 0) else grid_col2
+
+        with target_col:
             st.markdown(
-                f"""<div class='rollout-box {border_class}'>
+                f"""<div class='rollout-card {border_class}'>
                     <div style='display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;'>
-                        <strong>Rollout #{i+1}</strong>
-                        <span style='font-family:monospace; font-weight:700; color:{adv_color};'>Â = {adv_val:+.3f}</span>
+                        <strong style='font-size:1.05rem;'>Rollout #{i+1}</strong>
+                        <span class='badge-pill' style='font-family:monospace; font-size:0.85rem; color:{adv_color}; border-color:{adv_color};'>Â = {adv_val:+.3f}</span>
                     </div>
-                    <div style='font-size:0.75rem; color:#94a3b8; margin-bottom:0.5rem;'>{sample_rollouts[i]['desc']}</div>
-                    <div style='font-size:0.75rem; color:#38bdf8;'>Raw Score: <strong>{raw_scores[i]:.2f}</strong></div>
-                    <div style='font-size:0.75rem; color:{adv_color}; font-weight:600;'>{action_text}</div>
+                    <div style='font-size:0.82rem; color:#cbd5e1; margin-bottom:0.5rem;'><strong>Behavior:</strong> {sample_rollouts[i]['desc']}</div>
+                    <div style='display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; margin-bottom:0.6rem;'>
+                        <span style='color:#38bdf8;'>Raw Verified Score: <strong>{raw_scores[i]:.2f} / 1.50</strong></span>
+                        <span style='color:{adv_color}; font-weight:700;'>{action_text}</span>
+                    </div>
                 </div>""",
                 unsafe_allow_html=True,
             )
-            with st.expander(f"View Full Completion #{i+1}"):
-                st.code(sample_rollouts[i]["text"])
+            with st.expander(f"Inspect Completion #{i+1}", expanded=(i == 0)):
+                st.code(sample_rollouts[i]["text"], language="text")
 
 
 # -------------------------------------------------------------
@@ -387,13 +607,13 @@ elif menu == "⚖️ DPO Preference Inspector":
     c1, c2 = st.columns(2, gap="large")
     with c1:
         st.markdown("#### ✔ Chosen Trajectory ($y_w$)")
-        st.code(pair["chosen"])
-        st.markdown("<span class='badge-pass'>Verified Reward: 1.50</span>", unsafe_allow_html=True)
+        st.code(pair["chosen"], language="text")
+        st.markdown("<span class='badge-pass'>Verified Math & Format Reward: 1.50</span>", unsafe_allow_html=True)
 
     with c2:
         st.markdown("#### ✘ Rejected Trajectory ($y_l$)")
-        st.code(pair["rejected"])
-        st.markdown("<span class='badge-fail'>Verified Reward: 0.00</span>", unsafe_allow_html=True)
+        st.code(pair["rejected"], language="text")
+        st.markdown("<span class='badge-fail'>Verified Reward: 0.00 (Flawed Reasoning)</span>", unsafe_allow_html=True)
 
     st.markdown("---")
     st.markdown("### 🎯 Implicit Reward Dynamics & Bradley-Terry Loss")
@@ -413,33 +633,49 @@ elif menu == "⚖️ DPO Preference Inspector":
     k1, k2, k3, k4 = st.columns(4)
     with k1:
         st.markdown(
-            f"""<div class='metric-container'>
-                <div class='metric-title'>Chosen Implicit Reward</div>
-                <div class='metric-value' style='color:#34d399;'>{implicit_r_chosen:+.3f}</div>
+            f"""<div class='metric-card'>
+                <div class='metric-header'>
+                    <span>Chosen Implicit Reward</span>
+                    <span>✔</span>
+                </div>
+                <div class='metric-main-value' style='color:#34d399;'>{implicit_r_chosen:+.3f}</div>
+                <div class='metric-sub'>r_θ(y_w) = β log(π_θ / π_ref)</div>
             </div>""",
             unsafe_allow_html=True,
         )
     with k2:
         st.markdown(
-            f"""<div class='metric-container'>
-                <div class='metric-title'>Rejected Implicit Reward</div>
-                <div class='metric-value' style='color:#fb7185;'>{implicit_r_rejected:+.3f}</div>
+            f"""<div class='metric-card'>
+                <div class='metric-header'>
+                    <span>Rejected Implicit Reward</span>
+                    <span>✘</span>
+                </div>
+                <div class='metric-main-value' style='color:#fb7185;'>{implicit_r_rejected:+.3f}</div>
+                <div class='metric-sub'>r_θ(y_l) = β log(π_θ / π_ref)</div>
             </div>""",
             unsafe_allow_html=True,
         )
     with k3:
         st.markdown(
-            f"""<div class='metric-container'>
-                <div class='metric-title'>Reward Margin (Δr)</div>
-                <div class='metric-value' style='color:#38bdf8;'>{margin:+.3f}</div>
+            f"""<div class='metric-card'>
+                <div class='metric-header'>
+                    <span>Reward Margin (Δr)</span>
+                    <span>Δ</span>
+                </div>
+                <div class='metric-main-value' style='color:#38bdf8;'>{margin:+.3f}</div>
+                <div class='metric-sub'>r_θ(y_w) - r_θ(y_l)</div>
             </div>""",
             unsafe_allow_html=True,
         )
     with k4:
         st.markdown(
-            f"""<div class='metric-container'>
-                <div class='metric-title'>Bradley-Terry Win Prob</div>
-                <div class='metric-value' style='color:#c084fc;'>{bt_prob * 100:.1f}%</div>
+            f"""<div class='metric-card'>
+                <div class='metric-header'>
+                    <span>Bradley-Terry Win Prob</span>
+                    <span>🏆</span>
+                </div>
+                <div class='metric-main-value' style='color:#c084fc;'>{bt_prob * 100:.1f}%</div>
+                <div class='metric-sub'>P(y_w > y_l) = σ(Δr)</div>
             </div>""",
             unsafe_allow_html=True,
         )
