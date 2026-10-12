@@ -28,3 +28,7 @@ htmlcov/
 .DS_Store
 .idea/
 .vscode/
+
+# Personal Notes, Guides & Scratch
+DeepAlign_RL_Master_Guide.*
+scratch/
