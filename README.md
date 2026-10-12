@@ -241,16 +241,13 @@ Test the entire math verifier, GRPO advantage normalization, and DPO loss in you
 deepalign demo
 ```
 
-### 3. Launch Interactive Dashboard (Streamlit / Web)
-Explore rollout groups, token log-prob differentials, and live SymPy proofs:
+### 3. Launch Interactive Web Visualizer
+Explore rollout groups, token log-prob differentials, and live SymPy proofs in a sleek browser interface:
 
 ```bash
-# Launch Streamlit Dashboard (for local use or Streamlit Cloud deployment)
-streamlit run app.py
-
-# Alternatively, launch FastAPI visualizer
 deepalign serve-ui --port 8000
 ```
+Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.
 
 ### 4. Train with GRPO
 ```bash
@@ -291,4 +288,4 @@ pytest tests/ -v
 ---
 
 ## 📄 License
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License, see the [LICENSE](LICENSE) file for details.
